@@ -36,11 +36,13 @@ type Departure struct {
 }
 
 func main() {
+	// Retrieve arguments. If an errMsg is returned, print it and exit
 	busRoute, busStop, direction, errMsg := parseArgs()
 	if errMsg != "" {
 		fmt.Println(errMsg)
 		return
 	}
+	// Given route, stop, and direction, print TimeTillNextBus (or error)
 	fmt.Println(calculateTimeTillNextBus(busRoute, busStop, direction))
 }
 
@@ -53,7 +55,7 @@ func parseArgs() (busRoute string, busStop string, direction string, errMsg stri
 
 /**
 This function calculates the time till the next bus departs at the given bus stop going the given
-	direction on the given bus route.
+	direction on the given bus route. If at any point there is an error, return an error message
 Params:
 	busRoute: 			int
 	busStop:			string
