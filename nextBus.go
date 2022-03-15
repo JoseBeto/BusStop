@@ -35,8 +35,6 @@ type Departure struct {
 	Departure_time int64
 }
 
-var routes []Route
-
 func main() {
 	busRoute, busStop, direction, errMsg := parseArgs()
 	if errMsg != "" {
@@ -46,16 +44,27 @@ func main() {
 	fmt.Println(calculateTimeTillNextBus(busRoute, busStop, direction))
 }
 
-func parseArgs() (string, string, string, string) {
+func parseArgs() (busRoute string, busStop string, direction string, errMsg string) {
 	if len(os.Args) != 4 {
 		return "", "", "", "Not enough arguments. Use: go run nextBus.go [BusRoute] [BusStop] [Direction]"
 	}
 	return os.Args[1], os.Args[2], os.Args[3], ""
 }
 
-func calculateTimeTillNextBus(busRoute string, busStop string, direction string) string {
+/**
+This function calculates the time till the next bus departs at the given bus stop going the given
+	direction on the given bus route.
+Params:
+	busRoute: 			int
+	busStop:			string
+	direction:			string
+Returns:
+	timeTillNextBus:	string
+*/
+func calculateTimeTillNextBus(busRoute string, busStop string, direction string) (timeTillNextBus string) {
 	// Get Bus routes
-	err := getRoutes()
+	var routes []Route
+	routes, err := getRoutes()
 	if err != nil {
 		return "Error retrieving routes: " + err.Error()
 	}
@@ -86,40 +95,43 @@ func calculateTimeTillNextBus(busRoute string, busStop string, direction string)
 		return "Error getting bus direction ID: " + err.Error()
 	}
 
-	// Get timeTillNextBusStop of route given a direction_id and place_code
-	timeTillNextBusStop, err := getTimeTillNextBusStop(requestedRoute.Route_id, direction_id, place_code)
+	// Get timeTillNextBus of route given a direction_id and place_code
+	timeTillNextBus, err = getTimeTillNextBus(requestedRoute.Route_id, direction_id, place_code)
 	if err != nil {
 		return "Error getting time till next bus stop: " + err.Error()
 	}
 
-	return timeTillNextBusStop
+	return
 }
 
 /**
-This function retrieves bus routes
+This function returns bus routes
+Returns:
+	routes:	[]Route
+	err:	error
 */
-func getRoutes() error {
+func getRoutes() (routes []Route, err error) {
+	// Pull in bus routes
 	resp, err := http.Get("https://svc.metrotransit.org/nextripv2/routes")
 	if err != nil {
-		return err
+		return
 	}
 
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return
 	}
 
 	err = json.Unmarshal(body, &routes)
-	if err != nil {
-		return err
-	}
-	return nil
+	return
 }
 
 /**
-This function returns a routes direction_id
+This function, given a route, pulls in route directions. We then loop through the route directions
+	and match with the requested direction. If the direction exists in this route, we return the
+	direction_id. If no match is found, we return an error.
 Params:
 	route_id: 		int
 	direction:		string
@@ -128,6 +140,7 @@ Returns:
 	err:			error
 */
 func getBusDirectionID(route_id string, direction string) (direction_id int, err error) {
+	// Pull in route directions given a route
 	resp, err := http.Get(fmt.Sprintf("https://svc.metrotransit.org/nextripv2/directions/%s", route_id))
 	if err != nil {
 		return
@@ -156,7 +169,9 @@ func getBusDirectionID(route_id string, direction string) (direction_id int, err
 }
 
 /**
-This function get a bus stop's place code
+This function, given a route and direction, pulls in placeCodes of the route. We then loop
+	through the placesCodes and match with the requested busStop. If there is a match, we return the
+	place_code. If no match is found, we return an error.
 Params:
 	route_id		string
 	direction_id	int
@@ -166,6 +181,7 @@ Returns:
 	err				error
 */
 func getBusStopPlaceCode(route_id string, direction_id int, busStop string) (place_code string, err error) {
+	// Pull in placeCodes given a route and direction
 	resp, err := http.Get(fmt.Sprintf("https://svc.metrotransit.org/nextripv2/stops/%s/%d", route_id, direction_id))
 	if err != nil {
 		return
@@ -194,7 +210,9 @@ func getBusStopPlaceCode(route_id string, direction_id int, busStop string) (pla
 }
 
 /**
-This function returns time till next bus stop and error (if any).
+This function, given a route, direction_id, and place_code, pulls in routeDepartures. If no departures
+	are available, we return an empty string. If a departure is available, we get the first (earliest)
+	departure, calculate the time until the departure time, and return it.
 Params:
 	route_id			string
 	direction_id		int
@@ -203,7 +221,7 @@ Retruns:
 	timeTillNextBusStop	string
 	err					error
 */
-func getTimeTillNextBusStop(route_id string, direction_id int, place_code string) (timeTillNextBusStop string, err error) {
+func getTimeTillNextBus(route_id string, direction_id int, place_code string) (timeTillNextBusStop string, err error) {
 	resp, err := http.Get(fmt.Sprintf("https://svc.metrotransit.org/nextripv2/%s/%d/%s", route_id, direction_id, place_code))
 	if err != nil {
 		return
