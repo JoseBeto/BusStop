@@ -61,30 +61,33 @@ func calculateTimeTillNextBus(busRoute string, busStop string, direction string)
 	}
 
 	// Loop through routes and retrieve route that the user has requested
-	var selectedRoute Route
+	var requestedRoute Route
 	for _, route := range routes {
 		if route.Route_label == busRoute {
-			selectedRoute = route
+			requestedRoute = route
 			break
 		}
 	}
 
 	// Return error if route not found
-	if selectedRoute.Route_label == "" {
+	if requestedRoute.Route_label == "" {
 		return "Error: Route not found"
 	}
 
-	direction_id, err := getBusDirectionID(selectedRoute.Route_id, direction)
+	// Get direction_id of route given a direction
+	direction_id, err := getBusDirectionID(requestedRoute.Route_id, direction)
 	if err != nil {
 		return "Error getting bus direction ID: " + err.Error()
 	}
 
-	place_code, err := getBusStopPlaceCode(selectedRoute.Route_id, direction_id, busStop)
+	// Get place_code of route given a direction_id and busStop name
+	place_code, err := getBusStopPlaceCode(requestedRoute.Route_id, direction_id, busStop)
 	if err != nil {
 		return "Error getting bus direction ID: " + err.Error()
 	}
 
-	timeTillNextBusStop, err := getTimeTillNextBusStop(selectedRoute.Route_id, direction_id, place_code)
+	// Get timeTillNextBusStop of route given a direction_id and place_code
+	timeTillNextBusStop, err := getTimeTillNextBusStop(requestedRoute.Route_id, direction_id, place_code)
 	if err != nil {
 		return "Error getting time till next bus stop: " + err.Error()
 	}
@@ -143,6 +146,7 @@ func getBusDirectionID(route_id string, direction string) (direction_id int, err
 		return
 	}
 
+	// Loop through routeDirections until direction_name contains direction. If not found, return error
 	for _, routeDirection := range routeDirections {
 		if strings.Contains(strings.ToLower(routeDirection.Direction_name), direction) {
 			return routeDirection.Direction_id, nil
@@ -180,6 +184,7 @@ func getBusStopPlaceCode(route_id string, direction_id int, busStop string) (pla
 		return
 	}
 
+	// Loop through placeCodes until description matches busStop. If not found, return error
 	for _, placeCode := range placeCodes {
 		if strings.Contains(placeCode.Description, busStop) {
 			return placeCode.Place_code, nil
@@ -217,10 +222,12 @@ func getTimeTillNextBusStop(route_id string, direction_id int, place_code string
 		return
 	}
 
+	// Return empty string if no departures are scheduled
 	if len(routeDepartures.Departures) == 0 {
 		return "", err
 	}
 
+	// Get earliest departure and calculate minutes until departure_time
 	departure_time := time.Unix(routeDepartures.Departures[0].Departure_time, 0)
 	currentTime := time.Now()
 	diff := departure_time.Sub(currentTime)
