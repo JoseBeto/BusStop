@@ -163,7 +163,7 @@ func getBusDirectionID(route_id string, direction string) (direction_id int, err
 
 	// Loop through routeDirections until direction_name contains direction. If not found, return error
 	for _, routeDirection := range routeDirections {
-		if strings.Contains(strings.ToLower(routeDirection.Direction_name), direction) {
+		if strings.ToLower(routeDirection.Direction_name) == direction+"bound" {
 			return routeDirection.Direction_id, nil
 		}
 	}
